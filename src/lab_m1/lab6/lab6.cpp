@@ -57,6 +57,11 @@ void Lab6::Init()
         };
 
         CreateMesh("cube", vertices, indices);
+
+        // Cerinta 5: acelasi cub, dar cu normala pe pipe-ul 3 si culoarea pe pipe-ul 1
+        swapPipes = true;
+        CreateMesh("cube_swapped", vertices, indices);
+        swapPipes = false;
     }
 
     // Create a shader program for drawing face polygon with the color of the normal
@@ -113,17 +118,21 @@ Mesh* Lab6::CreateMesh(const char *name, const std::vector<VertexFormat> &vertic
     glEnableVertexAttribArray(0);
     glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(VertexFormat), 0);
 
+    // Pipe-urile pentru normala si culoare (cerinta 5: se interschimba 1 <-> 3)
+    const unsigned int normalPipe = swapPipes ? 3 : 1;
+    const unsigned int colorPipe  = swapPipes ? 1 : 3;
+
     // Set vertex normal attribute
-    glEnableVertexAttribArray(1);
-    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, sizeof(VertexFormat), (void*)(sizeof(glm::vec3)));
+    glEnableVertexAttribArray(normalPipe);
+    glVertexAttribPointer(normalPipe, 3, GL_FLOAT, GL_FALSE, sizeof(VertexFormat), (void*)(sizeof(glm::vec3)));
 
     // Set texture coordinate attribute
     glEnableVertexAttribArray(2);
     glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, sizeof(VertexFormat), (void*)(2 * sizeof(glm::vec3)));
 
     // Set vertex color attribute
-    glEnableVertexAttribArray(3);
-    glVertexAttribPointer(3, 3, GL_FLOAT, GL_FALSE, sizeof(VertexFormat), (void*)(2 * sizeof(glm::vec3) + sizeof(glm::vec2)));
+    glEnableVertexAttribArray(colorPipe);
+    glVertexAttribPointer(colorPipe, 3, GL_FLOAT, GL_FALSE, sizeof(VertexFormat), (void*)(2 * sizeof(glm::vec3) + sizeof(glm::vec2)));
     // ========================================================================
 
     // Unbind the VAO
@@ -167,7 +176,7 @@ void Lab6::Update(float deltaTimeSeconds)
         modelMatrix = glm::translate(modelMatrix, glm::vec3(0, 1, 0));
         modelMatrix = glm::rotate(modelMatrix, RADIANS(45.0f), glm::vec3(0, 1, 0));
         modelMatrix = glm::scale(modelMatrix, glm::vec3(0.5f));
-        RenderSimpleMesh(meshes["cube"], shaders["VertexNormal"], modelMatrix);
+        RenderSimpleMesh(meshes[showSwapped ? "cube_swapped" : "cube"], shaders["VertexNormal"], modelMatrix);
     }
 
     {
@@ -175,7 +184,7 @@ void Lab6::Update(float deltaTimeSeconds)
         modelMatrix = glm::translate(modelMatrix, glm::vec3(2, 0.5f, 0));
         modelMatrix = glm::rotate(modelMatrix, RADIANS(60.0f), glm::vec3(1, 0, 0));
         modelMatrix = glm::scale(modelMatrix, glm::vec3(0.5f));
-        RenderSimpleMesh(meshes["cube"], shaders["LabShader"], modelMatrix);
+        RenderSimpleMesh(meshes[showSwapped ? "cube_swapped" : "cube"], shaders["LabShader"], modelMatrix);
     }
 }
 
@@ -194,19 +203,26 @@ void Lab6::RenderSimpleMesh(Mesh *mesh, Shader *shader, const glm::mat4 & modelM
     // Render an object using the specified shader and the specified position
     glUseProgram(shader->program);
 
-    // TODO(student): Get shader location for uniform mat4 "Model"
+    // Model
+    int locModel = glGetUniformLocation(shader->program, "Model");
+    glUniformMatrix4fv(locModel, 1, GL_FALSE, glm::value_ptr(modelMatrix));
 
-    // TODO(student): Set shader uniform "Model" to modelMatrix
-
-    // TODO(student): Get shader location for uniform mat4 "View"
-
-    // TODO(student): Set shader uniform "View" to viewMatrix
+    // View
     glm::mat4 viewMatrix = GetSceneCamera()->GetViewMatrix();
+    int locView = glGetUniformLocation(shader->program, "View");
+    glUniformMatrix4fv(locView, 1, GL_FALSE, glm::value_ptr(viewMatrix));
 
-    // TODO(student): Get shader location for uniform mat4 "Projection"
-
-    // TODO(student): Set shader uniform "Projection" to projectionMatrix
+    // Projection
     glm::mat4 projectionMatrix = GetSceneCamera()->GetProjectionMatrix();
+    int locProjection = glGetUniformLocation(shader->program, "Projection");
+    glUniformMatrix4fv(locProjection, 1, GL_FALSE, glm::value_ptr(projectionMatrix));
+
+    // Bonus: timpul aplicatiei + activarea efectului (shaderele care nu au
+    // aceste uniforme intorc locatia -1, iar glUniform pe -1 e ignorat)
+    int locTime = glGetUniformLocation(shader->program, "Time");
+    glUniform1f(locTime, static_cast<float>(Engine::GetElapsedTime()));
+    int locBonus = glGetUniformLocation(shader->program, "Bonus");
+    glUniform1i(locBonus, bonus ? 1 : 0);
 
     // Draw the object
     glBindVertexArray(mesh->GetBuffers()->m_VAO);
@@ -228,7 +244,13 @@ void Lab6::OnInputUpdate(float deltaTime, int mods)
 
 void Lab6::OnKeyPress(int key, int mods)
 {
-    // Add key press event
+    // P: cubul cu pipe-urile 1 si 3 interschimbate (cerinta 5)
+    if (key == GLFW_KEY_P)
+        showSwapped = !showSwapped;
+
+    // B: bonus, pozitie si culoare variate in timp
+    if (key == GLFW_KEY_B)
+        bonus = !bonus;
 }
 
 

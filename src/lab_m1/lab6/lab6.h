@@ -32,5 +32,12 @@ namespace m1
         void OnMouseBtnRelease(int mouseX, int mouseY, int button, int mods) override;
         void OnMouseScroll(int mouseX, int mouseY, int offsetX, int offsetY) override;
         void OnWindowResize(int width, int height) override;
+
+        // Cerinta 5: daca e true, CreateMesh trimite normala pe pipe-ul 3 si culoarea pe pipe-ul 1
+        bool swapPipes = false;
+        // Tasta P: deseneaza cubul cu pipe-urile interschimbate
+        bool showSwapped = false;
+        // Tasta B: bonus (pozitie + culoare variate in timp)
+        bool bonus = false;
     };
 }   // namespace m1
