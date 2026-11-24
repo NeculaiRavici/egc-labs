@@ -34,5 +34,6 @@ namespace m1
         unsigned int materialShininess;
         float materialKd;
         float materialKs;
+        bool useBlinn;
     };
 }   // namespace m1

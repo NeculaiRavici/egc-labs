@@ -19,22 +19,32 @@ uniform int material_shininess;
 
 uniform vec3 object_color;
 
+// 1 = Blinn (half vector), 0 = Phong (reflect)
+uniform int use_blinn;
+
 // Output value to fragment shader
 out vec3 color;
 
 
 void main()
 {
-    // TODO(student): Compute world space vectors
+    // World space vectors
+    vec3 world_pos    = (Model * vec4(v_position, 1)).xyz;
+    vec3 world_normal = normalize(mat3(Model) * v_normal);
 
-    // TODO(student): Define ambient light component
-    float ambient_light = 0.25;
+    vec3 N = world_normal;
+    vec3 L = normalize(light_position - world_pos);
+    vec3 V = normalize(eye_position - world_pos);
+    vec3 H = normalize(L + V);
 
-    // TODO(student): Compute diffuse light component
-    float diffuse_light = 0;
+    // Ambient component (global ambient color, Kd used instead of Ka)
+    float ambient_light = 0.25 * material_kd;
 
-    // TODO(student): Compute specular light component
-    float specular_light = 0;
+    // Diffuse component (light color = white = 1)
+    float diffuse_light = material_kd * max(dot(N, L), 0.0);
+
+    // Specular component
+    float specular_light = 0.0;
 
     // It's important to distinguish between "reflection model" and
     // "shading method". In this shader, we are experimenting with the Phong
@@ -43,13 +53,25 @@ void main()
     // method, which we'll use in the future. Don't mix them up!
     if (diffuse_light > 0)
     {
-
+        if (use_blinn == 1) {
+            // Blinn: median (half) vector
+            specular_light = material_ks * pow(max(dot(N, H), 0.0), material_shininess);
+        } else {
+            // Phong: reflected vector
+            vec3 R = reflect(-L, N);
+            specular_light = material_ks * pow(max(dot(V, R), 0.0), material_shininess);
+        }
     }
 
-    // TODO(student): Compute light
+    // Attenuation: 1 / (Kc + Kl*d + Kq*d^2)
+    float d = distance(light_position, world_pos);
+    float Kc = 1.0, Kl = 0.1, Kq = 0.05;
+    float attenuation = 1.0 / (Kc + Kl * d + Kq * d * d);
 
-    // TODO(student): Send color light output to fragment shader
-    color = vec3(1);
+    float light = ambient_light + attenuation * (diffuse_light + specular_light);
+
+    // Send color light output to fragment shader
+    color = object_color * light;
 
     gl_Position = Projection * View * Model * vec4(v_position, 1.0);
 }

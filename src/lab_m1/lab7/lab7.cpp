@@ -59,6 +59,7 @@ void Lab7::Init()
         materialShininess = 30;
         materialKd = 0.5;
         materialKs = 0.5;
+        useBlinn = true;
     }
 }
 
@@ -80,7 +81,7 @@ void Lab7::Update(float deltaTimeSeconds)
     {
         glm::mat4 modelMatrix = glm::mat4(1);
         modelMatrix = glm::translate(modelMatrix, glm::vec3(0, 1, 0));
-        RenderSimpleMesh(meshes["sphere"], shaders["LabShader"], modelMatrix);
+        RenderSimpleMesh(meshes["sphere"], shaders["LabShader"], modelMatrix, glm::vec3(0.2f, 0.4f, 1.0f));
     }
 
     {
@@ -103,7 +104,7 @@ void Lab7::Update(float deltaTimeSeconds)
         glm::mat4 modelMatrix = glm::mat4(1);
         modelMatrix = glm::translate(modelMatrix, glm::vec3(0, 0.01f, 0));
         modelMatrix = glm::scale(modelMatrix, glm::vec3(0.25f));
-        RenderSimpleMesh(meshes["plane"], shaders["LabShader"], modelMatrix);
+        RenderSimpleMesh(meshes["plane"], shaders["LabShader"], modelMatrix, glm::vec3(0.6f));
     }
 
     // Render the point light in the scene
@@ -131,12 +132,21 @@ void Lab7::RenderSimpleMesh(Mesh *mesh, Shader *shader, const glm::mat4 & modelM
     glUseProgram(shader->program);
 
     // Set shader uniforms for light & material properties
-    // TODO(student): Set light position uniform
+    // Set light position uniform
+    glUniform3fv(glGetUniformLocation(shader->program, "light_position"), 1, glm::value_ptr(lightPosition));
 
     glm::vec3 eyePosition = GetSceneCamera()->m_transform->GetWorldPosition();
-    // TODO(student): Set eye position (camera position) uniform
+    // Set eye position (camera position) uniform
+    glUniform3fv(glGetUniformLocation(shader->program, "eye_position"), 1, glm::value_ptr(eyePosition));
 
-    // TODO(student): Set material property uniforms (shininess, kd, ks, object color)
+    // Set material property uniforms (shininess, kd, ks, object color)
+    glUniform1i(glGetUniformLocation(shader->program, "material_shininess"), materialShininess);
+    glUniform1f(glGetUniformLocation(shader->program, "material_kd"), materialKd);
+    glUniform1f(glGetUniformLocation(shader->program, "material_ks"), materialKs);
+    glUniform3fv(glGetUniformLocation(shader->program, "object_color"), 1, glm::value_ptr(color));
+
+    // Specular model: Blinn (half vector) or Phong (reflect)
+    glUniform1i(glGetUniformLocation(shader->program, "use_blinn"), useBlinn ? 1 : 0);
 
     // Bind model matrix
     GLint loc_model_matrix = glGetUniformLocation(shader->program, "Model");
@@ -188,7 +198,17 @@ void Lab7::OnInputUpdate(float deltaTime, int mods)
 
 void Lab7::OnKeyPress(int key, int mods)
 {
-    // Add key press event
+    // R reloads the shaders (alternative to F5, which is a brightness key on this laptop)
+    if (key == GLFW_KEY_R) {
+        ReloadShaders();
+        cout << "Shaders reloaded" << endl;
+    }
+
+    // B toggles the specular model: Blinn (half vector) <-> Phong (reflect)
+    if (key == GLFW_KEY_B) {
+        useBlinn = !useBlinn;
+        cout << "Specular: " << (useBlinn ? "Blinn (N.H)" : "Phong (V.R)") << endl;
+    }
 }
 
 
