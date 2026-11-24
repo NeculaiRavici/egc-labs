@@ -40,19 +40,41 @@ void Lab2::Init()
 
     // Create a mesh box using custom data
     {
+        // 8 varfuri: 0-3 fata din fata (z = 1), 4-7 fata din spate (z = -1)
+        // VertexFormat(pozitie, culoare)
         vector<VertexFormat> vertices
         {
             VertexFormat(glm::vec3(-1, -1,  1), glm::vec3(0, 1, 1), glm::vec3(0.2, 0.8, 0.6)),
-            // TODO(student): Complete the vertices data for the cube mesh
-
+            VertexFormat(glm::vec3( 1, -1,  1), glm::vec3(1, 0, 1)),
+            VertexFormat(glm::vec3(-1,  1,  1), glm::vec3(1, 1, 0)),
+            VertexFormat(glm::vec3( 1,  1,  1), glm::vec3(1, 0, 0)),
+            VertexFormat(glm::vec3(-1, -1, -1), glm::vec3(0, 1, 0)),
+            VertexFormat(glm::vec3( 1, -1, -1), glm::vec3(0, 0, 1)),
+            VertexFormat(glm::vec3(-1,  1, -1), glm::vec3(1, 1, 1)),
+            VertexFormat(glm::vec3( 1,  1, -1), glm::vec3(0.5, 0.5, 0.5)),
         };
 
+        // 6 fete x 2 triunghiuri = 12 triunghiuri
+        // fiecare triunghi e dat in sens trigonometric (CCW) privit din afara cubului
         vector<unsigned int> indices =
         {
             0, 1, 2,    // indices for first triangle
             1, 3, 2,    // indices for second triangle
-            // TODO(student): Complete indices data for the cube mesh
-
+            // spate (z = -1)
+            5, 4, 7,
+            4, 6, 7,
+            // dreapta (x = 1)
+            1, 5, 3,
+            5, 7, 3,
+            // stanga (x = -1)
+            4, 0, 6,
+            0, 2, 6,
+            // sus (y = 1)
+            2, 3, 6,
+            3, 7, 6,
+            // jos (y = -1)
+            4, 5, 0,
+            5, 1, 0,
         };
 
         meshes["cube_A"] = new Mesh("generated cube 1");
@@ -62,32 +84,75 @@ void Lab2::Init()
         CreateMesh("cube_B", vertices, indices);
     }
 
-    // TODO(student): Create a tetrahedron mesh. You can create it with
-    // only 4 vertices, or you can choose the harder route and create it
-    // with 12 vertices. Think about it, why would you want that, and how
-    // would you do it? After all, a tetrahedron has only 4 vertices
-    // by definition!
+    // tetraedru cu 4 varfuri: baza pe y = 0 si un varf sus
+    {
+        vector<VertexFormat> vertices
+        {
+            VertexFormat(glm::vec3(-1, 0,  1), glm::vec3(1, 0, 0)),
+            VertexFormat(glm::vec3( 1, 0,  1), glm::vec3(0, 1, 0)),
+            VertexFormat(glm::vec3( 0, 0, -1), glm::vec3(0, 0, 1)),
+            VertexFormat(glm::vec3( 0, 1.5f, 0.33f), glm::vec3(1, 1, 0)),
+        };
 
-    // TODO(student): Create a square using two triangles with
-    // opposing vertex orientations.
+        // 4 fete, toate CCW privite din afara
+        vector<unsigned int> indices =
+        {
+            0, 2, 1,    // baza (se vede de jos)
+            0, 1, 3,    // fata
+            1, 2, 3,    // dreapta
+            2, 0, 3,    // stanga
+        };
 
+        CreateMesh("tetraedru", vertices, indices);
+    }
+
+    // patrat din 2 triunghiuri cu orientari opuse
+    // triunghiul rosu e CCW privit din fata (+z), cel albastru e CW
+    // => cu culling, din fata se vede doar rosul, din spate doar albastrul
+    // am pus 6 varfuri (nu 4) ca fiecare triunghi sa aiba culoarea lui
+    {
+        vector<VertexFormat> vertices
+        {
+            VertexFormat(glm::vec3(-1, -1, 0), glm::vec3(1, 0, 0)),
+            VertexFormat(glm::vec3( 1, -1, 0), glm::vec3(1, 0, 0)),
+            VertexFormat(glm::vec3(-1,  1, 0), glm::vec3(1, 0, 0)),
+            VertexFormat(glm::vec3( 1, -1, 0), glm::vec3(0, 0, 1)),
+            VertexFormat(glm::vec3(-1,  1, 0), glm::vec3(0, 0, 1)),
+            VertexFormat(glm::vec3( 1,  1, 0), glm::vec3(0, 0, 1)),
+        };
+
+        vector<unsigned int> indices =
+        {
+            0, 1, 2,    // rosu, CCW din fata
+            3, 4, 5,    // albastru, CW din fata (deci CCW din spate)
+        };
+
+        CreateMesh("patrat", vertices, indices);
+    }
 }
 
 
 void Lab2::CreateMesh(const char *name, const std::vector<VertexFormat> &vertices, const std::vector<unsigned int> &indices)
 {
+    // VAO-ul tine minte toate legaturile de mai jos (VBO, IBO, atribute)
     unsigned int VAO = 0;
-    // TODO(student): Create the VAO and bind it
+    glGenVertexArrays(1, &VAO);
+    glBindVertexArray(VAO);
 
+    // VBO = varfurile (pozitie, normala, coord textura, culoare)
     unsigned int VBO = 0;
-    // TODO(student): Create the VBO and bind it
+    glGenBuffers(1, &VBO);
+    glBindBuffer(GL_ARRAY_BUFFER, VBO);
 
-    // TODO(student): Send vertices data into the VBO buffer
+    // copiez varfurile din RAM pe GPU
+    glBufferData(GL_ARRAY_BUFFER, sizeof(vertices[0]) * vertices.size(), &vertices[0], GL_STATIC_DRAW);
 
+    // IBO = indicii (cum leg varfurile in triunghiuri)
     unsigned int IBO = 0;
-    // TODO(student): Create the IBO and bind it
+    glGenBuffers(1, &IBO);
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, IBO);
 
-    // TODO(student): Send indices data into the IBO buffer
+    glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices[0]) * indices.size(), &indices[0], GL_STATIC_DRAW);
 
     // ========================================================================
     // This section demonstrates how the GPU vertex shader program
@@ -113,7 +178,8 @@ void Lab2::CreateMesh(const char *name, const std::vector<VertexFormat> &vertice
     glVertexAttribPointer(3, 3, GL_FLOAT, GL_FALSE, sizeof(VertexFormat), (void*)(2 * sizeof(glm::vec3) + sizeof(glm::vec2)));
     // ========================================================================
 
-    // TODO(student): Unbind the VAO
+    // dezleg VAO-ul ca sa nu se mai lege alte comenzi de el din greseala
+    glBindVertexArray(0);
 
     // Check for OpenGL errors
     if (GetOpenGLError() == GL_INVALID_OPERATION)
@@ -147,9 +213,9 @@ void Lab2::Update(float deltaTimeSeconds)
     glPointSize(5);
     glPolygonMode(GL_FRONT_AND_BACK, polygonMode);
 
-    // TODO(student): Enable face culling
-
-    // TODO(student): Set face custom culling. Use the `cullFace` variable.
+    // pornesc face culling si aleg ce fete arunc (GL_BACK sau GL_FRONT, schimb cu F2)
+    glEnable(GL_CULL_FACE);
+    glCullFace(cullFace);
 
     // Render an object using face normals for color
     RenderMesh(meshes["box"], shaders["VertexNormal"], glm::vec3(0, 0.5f, -1.5f), glm::vec3(0.75f));
@@ -157,13 +223,15 @@ void Lab2::Update(float deltaTimeSeconds)
     // Render an object using colors from vertex
     RenderMesh(meshes["cube_A"], shaders["VertexColor"], glm::vec3(-1.5f, 0.5f, 0), glm::vec3(0.25f));
 
-    // TODO(student): Draw the mesh that was created with `CreateMesh()`
+    // cubul facut de mine cu CreateMesh, in dreapta (cube_A e in stanga)
+    RenderMesh(meshes["cube_B"], shaders["VertexColor"], glm::vec3(1.5f, 0.5f, 0), glm::vec3(0.25f));
 
-    // TODO(student): Draw the tetrahedron
+    RenderMesh(meshes["tetraedru"], shaders["VertexColor"], glm::vec3(-2, 0, -2), glm::vec3(0.5f));
 
-    // TODO(student): Draw the square
+    RenderMesh(meshes["patrat"], shaders["VertexColor"], glm::vec3(2, 0.5f, -2), glm::vec3(0.5f));
 
-    // TODO(student): Disable face culling
+    // opresc culling-ul ca sa nu afecteze ce se deseneaza dupa (axele din FrameEnd)
+    glDisable(GL_CULL_FACE);
 
 }
 
@@ -187,9 +255,16 @@ void Lab2::OnInputUpdate(float deltaTime, int mods)
 
 void Lab2::OnKeyPress(int key, int mods)
 {
-    // TODO(student): Switch between GL_FRONT and GL_BACK culling.
-    // Save the state in `cullFace` variable and apply it in the
-    // `Update()` method, NOT here!
+    // F2 (sau V, pe laptop F2 e tasta de volum) = schimb intre GL_BACK si GL_FRONT
+    // aici doar salvez starea, o aplic in Update cu glCullFace
+    if (key == GLFW_KEY_F2 || key == GLFW_KEY_V)
+    {
+        if (cullFace == GL_BACK)
+            cullFace = GL_FRONT;
+        else
+            cullFace = GL_BACK;
+        cout << "culling: " << (cullFace == GL_BACK ? "GL_BACK" : "GL_FRONT") << endl;
+    }
 
     if (key == GLFW_KEY_SPACE)
     {
