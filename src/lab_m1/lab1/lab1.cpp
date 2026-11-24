@@ -15,7 +15,18 @@ using namespace m1;
 
 Lab1::Lab1()
 {
-    // TODO(student): Never forget to initialize class variables!
+    r = 0; g = 0; b = 0;
+    idx_culoare = 0;
+
+    pos = glm::vec3(0, 0.5f, 2);
+
+    meshe[0] = "box";
+    meshe[1] = "sphere";
+    meshe[2] = "teapot";
+    idx_mesh = 0;
+
+    vy = 0;
+    in_aer = false;
 
 }
 
@@ -35,8 +46,17 @@ void Lab1::Init()
         meshes[mesh->GetMeshID()] = mesh;
     }
 
-    // TODO(student): Load some more meshes. The value of RESOURCE_PATH::MODELS
-    // is actually a path on disk, go there and you will find more meshes.
+    // mai incarc niste mesh-uri din assets/models/primitives
+    {
+        Mesh* mesh = new Mesh("sphere");
+        mesh->LoadMesh(PATH_JOIN(window->props.selfDir, RESOURCE_PATH::MODELS, "primitives"), "sphere.obj");
+        meshes[mesh->GetMeshID()] = mesh;
+    }
+    {
+        Mesh* mesh = new Mesh("teapot");
+        mesh->LoadMesh(PATH_JOIN(window->props.selfDir, RESOURCE_PATH::MODELS, "primitives"), "teapot.obj");
+        meshes[mesh->GetMeshID()] = mesh;
+    }
 
 }
 
@@ -55,7 +75,7 @@ void Lab1::Update(float deltaTimeSeconds)
     // TODO(student): Generalize the arguments of `glClearColor`.
     // You can, for example, declare three variables in the class header,
     // that will store the color components (red, green, blue).
-    glClearColor(0, 0, 0, 1);
+    glClearColor(r, g, b, 1);
 
     // Clears the color buffer (using the previously set color) and depth buffer
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -69,10 +89,22 @@ void Lab1::Update(float deltaTimeSeconds)
     // Render the object again but with different properties
     RenderMesh(meshes["box"], glm::vec3(-1, 0.5f, 0));
 
-    // TODO(student): We need to render (a.k.a. draw) the mesh that
-    // was previously loaded. We do this using `RenderMesh`. Check the
-    // signature of this function to see the meaning of its parameters.
-    // You can draw the same mesh any number of times.
+    // inca un obiect, sfera mai mare in spate
+    RenderMesh(meshes["sphere"], glm::vec3(0, 1, -2), glm::vec3(1.5f));
+
+    // bonus: saritura cu gravitatie
+    if (in_aer) {
+        vy -= 9.8f * deltaTimeSeconds;
+        pos.y += vy * deltaTimeSeconds;
+        if (pos.y <= 0.5f) {
+            pos.y = 0.5f;
+            vy = 0;
+            in_aer = false;
+        }
+    }
+
+    // obiectul controlat de mine (se misca si isi schimba forma)
+    RenderMesh(meshes[meshe[idx_mesh]], pos);
 
 }
 
@@ -93,9 +125,18 @@ void Lab1::OnInputUpdate(float deltaTime, int mods)
 {
     // Treat continuous update based on input
 
-    // TODO(student): Add some key hold events that will let you move
-    // a mesh instance on all three axes. You will also need to
-    // generalize the position used by `RenderMesh`.
+    // daca tin click dreapta, WASD misca camera, deci nu mut obiectul
+    if (window->MouseHold(GLFW_MOUSE_BUTTON_RIGHT))
+        return;
+
+    float viteza = 2.0f;
+
+    if (window->KeyHold(GLFW_KEY_W)) pos.z -= viteza * deltaTime;
+    if (window->KeyHold(GLFW_KEY_S)) pos.z += viteza * deltaTime;
+    if (window->KeyHold(GLFW_KEY_A)) pos.x -= viteza * deltaTime;
+    if (window->KeyHold(GLFW_KEY_D)) pos.x += viteza * deltaTime;
+    if (window->KeyHold(GLFW_KEY_E)) pos.y += viteza * deltaTime;
+    if (window->KeyHold(GLFW_KEY_Q)) pos.y -= viteza * deltaTime;
 
 }
 
@@ -104,13 +145,27 @@ void Lab1::OnKeyPress(int key, int mods)
 {
     // Add key press event
     if (key == GLFW_KEY_F) {
-        // TODO(student): Change the values of the color components.
+        // trec prin cateva culori pe rand
+        idx_culoare = (idx_culoare + 1) % 4;
+        if (idx_culoare == 0) { r = 0;    g = 0;    b = 0; }
+        if (idx_culoare == 1) { r = 0.2f; g = 0.1f; b = 0.4f; }
+        if (idx_culoare == 2) { r = 0.1f; g = 0.4f; b = 0.3f; }
+        if (idx_culoare == 3) { r = 0.6f; g = 0.6f; b = 0.6f; }
+        cout << "culoare fundal: " << r << " " << g << " " << b << endl;
 
     }
 
-    // TODO(student): Add a key press event that will let you cycle
-    // through at least two meshes, rendered at the same position.
-    // You will also need to generalize the mesh name used by `RenderMesh`.
+    // M = schimb mesh-ul
+    if (key == GLFW_KEY_M) {
+        idx_mesh = (idx_mesh + 1) % 3;
+        cout << "mesh: " << meshe[idx_mesh] << endl;
+    }
+
+    // SPACE = sare (bonus)
+    if (key == GLFW_KEY_SPACE && !in_aer) {
+        vy = 5.0f;
+        in_aer = true;
+    }
 
 }
 

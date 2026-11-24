@@ -27,7 +27,20 @@ namespace m1
         void OnMouseScroll(int mouseX, int mouseY, int offsetX, int offsetY) override;
         void OnWindowResize(int width, int height) override;
 
-        // TODO(student): Class variables go here
+        // culoarea de fundal
+        float r, g, b;
+        int idx_culoare;
+
+        // obiectul pe care il mut cu tastele
+        glm::vec3 pos;
+
+        // ce mesh desenez (se schimba cu tasta M)
+        std::string meshe[3];
+        int idx_mesh;
+
+        // bonus: saritura
+        float vy;
+        bool in_aer;
 
     };
 }   // namespace m1
