@@ -43,9 +43,21 @@ void Lab5::Init()
         meshes[mesh->GetMeshID()] = mesh;
     }
 
+    {
+        Mesh* mesh = new Mesh("teapot");
+        mesh->LoadMesh(PATH_JOIN(window->props.selfDir, RESOURCE_PATH::MODELS, "primitives"), "teapot.obj");
+        meshes[mesh->GetMeshID()] = mesh;
+    }
+
     // TODO(student): After you implement the changing of the projection
     // parameters, remove hardcodings of these parameters
-    projectionMatrix = glm::perspective(RADIANS(60), window->props.aspectRatio, 0.01f, 200.0f);
+    isOrtho = false;
+    fov = 60;
+    orthoWidth = 8;
+    orthoHeight = 4.5f;
+    zNear = 0.01f;
+    zFar = 200.0f;
+    projectionMatrix = glm::perspective(RADIANS(fov), window->props.aspectRatio, zNear, zFar);
 
 }
 
@@ -90,6 +102,24 @@ void Lab5::Update(float deltaTimeSeconds)
     // `RenderMesh()` that we've been using up until now. This new
     // function uses the view matrix from the camera that you just
     // implemented, and the local projection matrix.
+
+    // obiect nou 1: sfera mutata in spate si marita
+    {
+        glm::mat4 modelMatrix = glm::mat4(1);
+        modelMatrix = glm::translate(modelMatrix, glm::vec3(0, 1.5f, -3));
+        modelMatrix = glm::scale(modelMatrix, glm::vec3(1.5f));
+        RenderMesh(meshes["sphere"], shaders["VertexNormal"], modelMatrix);
+    }
+
+    // obiect nou 2: ceainic in dreapta, rotit pe OY si OZ si turtit pe y
+    {
+        glm::mat4 modelMatrix = glm::mat4(1);
+        modelMatrix = glm::translate(modelMatrix, glm::vec3(3, 1, -2));
+        modelMatrix = glm::rotate(modelMatrix, RADIANS(-30.0f), glm::vec3(0, 1, 0));
+        modelMatrix = glm::rotate(modelMatrix, RADIANS(20.0f), glm::vec3(0, 0, 1));
+        modelMatrix = glm::scale(modelMatrix, glm::vec3(1.2f, 0.6f, 1.2f));
+        RenderMesh(meshes["teapot"], shaders["VertexNormal"], modelMatrix);
+    }
 
     // Render the camera target. This is useful for understanding where
     // the rotation point is, when moving in third-person camera mode.
@@ -139,32 +169,32 @@ void Lab5::OnInputUpdate(float deltaTime, int mods)
 
         if (window->KeyHold(GLFW_KEY_W)) {
             // TODO(student): Translate the camera forward
-
+            camera->TranslateForward(cameraSpeed * deltaTime);
         }
 
         if (window->KeyHold(GLFW_KEY_A)) {
             // TODO(student): Translate the camera to the left
-
+            camera->TranslateRight(-cameraSpeed * deltaTime);
         }
 
         if (window->KeyHold(GLFW_KEY_S)) {
             // TODO(student): Translate the camera backward
-
+            camera->TranslateForward(-cameraSpeed * deltaTime);
         }
 
         if (window->KeyHold(GLFW_KEY_D)) {
             // TODO(student): Translate the camera to the right
-
+            camera->TranslateRight(cameraSpeed * deltaTime);
         }
 
         if (window->KeyHold(GLFW_KEY_Q)) {
             // TODO(student): Translate the camera downward
-
+            camera->TranslateUpward(-cameraSpeed * deltaTime);
         }
 
         if (window->KeyHold(GLFW_KEY_E)) {
             // TODO(student): Translate the camera upward
-
+            camera->TranslateUpward(cameraSpeed * deltaTime);
         }
     }
 
@@ -172,6 +202,37 @@ void Lab5::OnInputUpdate(float deltaTime, int mods)
     // variables you might need in the class header. Inspect this file
     // for any hardcoded projection arguments (can you find any?) and
     // replace them with those extra variables.
+
+    // Z / X -> mareste / micsoreaza FoV-ul (perspectiva)
+    //          sau latimea+inaltimea ferestrei de proiectie (ortografica)
+    // (nu cer click dreapta aici, ca sa nu se amestece cu WASD)
+    if (!window->MouseHold(GLFW_MOUSE_BUTTON_RIGHT)) {
+        if (!isOrtho) {
+            if (window->KeyHold(GLFW_KEY_Z)) fov += 30 * deltaTime;
+            if (window->KeyHold(GLFW_KEY_X)) fov -= 30 * deltaTime;
+            // limitez ca sa nu se intoarca imaginea (fov >= 180) sau sa fie 0
+            if (fov < 10) fov = 10;
+            if (fov > 150) fov = 150;
+        } else {
+            if (window->KeyHold(GLFW_KEY_Z)) { orthoWidth += 4 * deltaTime; orthoHeight += 2.25f * deltaTime; }
+            if (window->KeyHold(GLFW_KEY_X)) { orthoWidth -= 4 * deltaTime; orthoHeight -= 2.25f * deltaTime; }
+            // C / V -> doar latimea, B / N -> doar inaltimea
+            if (window->KeyHold(GLFW_KEY_C)) orthoWidth += 4 * deltaTime;
+            if (window->KeyHold(GLFW_KEY_V)) orthoWidth -= 4 * deltaTime;
+            if (window->KeyHold(GLFW_KEY_B)) orthoHeight += 4 * deltaTime;
+            if (window->KeyHold(GLFW_KEY_N)) orthoHeight -= 4 * deltaTime;
+            if (orthoWidth < 0.5f) orthoWidth = 0.5f;
+            if (orthoHeight < 0.5f) orthoHeight = 0.5f;
+        }
+    }
+
+    // recalculez matricea de proiectie in fiecare frame (e ieftin)
+    if (isOrtho) {
+        // fereastra e centrata in (0, 0) -> left = -w/2, right = w/2 etc.
+        projectionMatrix = glm::ortho(-orthoWidth / 2, orthoWidth / 2, -orthoHeight / 2, orthoHeight / 2, zNear, zFar);
+    } else {
+        projectionMatrix = glm::perspective(RADIANS(fov), window->props.aspectRatio, zNear, zFar);
+    }
 
 }
 
@@ -184,7 +245,14 @@ void Lab5::OnKeyPress(int key, int mods)
         renderCameraTarget = !renderCameraTarget;
     }
     // TODO(student): Switch projections
-
+    if (key == GLFW_KEY_O) {
+        isOrtho = true;
+        cout << "proiectie ortografica" << endl;
+    }
+    if (key == GLFW_KEY_P) {
+        isOrtho = false;
+        cout << "proiectie perspectiva" << endl;
+    }
 }
 
 
@@ -200,8 +268,8 @@ void Lab5::OnMouseMove(int mouseX, int mouseY, int deltaX, int deltaY)
 
     if (window->MouseHold(GLFW_MOUSE_BUTTON_RIGHT))
     {
-        float sensivityOX = 0.001f;
-        float sensivityOY = 0.001f;
+        float sensivityOX = 0.003f;   // am marit putin, la 0.001 se misca foarte greu
+        float sensivityOY = 0.003f;
 
         if (window->GetSpecialKeyState() == 0) {
             renderCameraTarget = false;
@@ -209,6 +277,10 @@ void Lab5::OnMouseMove(int mouseX, int mouseY, int deltaX, int deltaY)
             // OX and OY using `deltaX` and `deltaY`. Use the sensitivity
             // variables for setting up the rotation speed.
 
+            // mouse in dreapta (deltaX > 0) -> ma rotesc spre dreapta = unghi negativ pe OY
+            // mouse in jos (deltaY > 0) -> ma uit in jos = unghi negativ pe OX
+            camera->RotateFirstPerson_OX(-deltaY * sensivityOX);
+            camera->RotateFirstPerson_OY(-deltaX * sensivityOY);
         }
 
         if (window->GetSpecialKeyState() & GLFW_MOD_CONTROL) {
@@ -217,6 +289,9 @@ void Lab5::OnMouseMove(int mouseX, int mouseY, int deltaX, int deltaY)
             // OX and OY using `deltaX` and `deltaY`. Use the sensitivity
             // variables for setting up the rotation speed.
 
+            // la fel, dar ma rotesc in jurul target-ului (sfera mica, tasta T)
+            camera->RotateThirdPerson_OX(-deltaY * sensivityOX);
+            camera->RotateThirdPerson_OY(-deltaX * sensivityOY);
         }
     }
 }

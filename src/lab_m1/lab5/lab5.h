@@ -37,5 +37,12 @@ namespace m1
 
         // TODO(student): If you need any other class variables, define them here.
 
+        // parametrii proiectiei (inainte erau hardcodate in Init)
+        bool isOrtho;       // false = perspectiva, true = ortografica
+        float fov;          // in grade, doar pt perspectiva
+        float orthoWidth;   // latimea ferestrei de proiectie (ortografica)
+        float orthoHeight;  // inaltimea ferestrei de proiectie (ortografica)
+        float zNear, zFar;
+
     };
 }   // namespace m1
