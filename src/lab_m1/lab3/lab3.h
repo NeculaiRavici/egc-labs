@@ -34,7 +34,10 @@ namespace m1
         float scaleX, scaleY;
         float angularStep;
 
-        // TODO(student): If you need any other class variables, define them here.
+        // Direction of the translation animation (+1 / -1)
+        float translateDir;
+        // Direction of the scale animation (+1 grows, -1 shrinks)
+        float scaleDir;
 
     };
 }   // namespace m1
